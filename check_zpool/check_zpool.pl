@@ -15,7 +15,7 @@ my $thresholds = {
 				capacity => { w => 70, c => 80 },
 				frag => { w => 50, c => 75 },
 				leaked => { w => 0, c => 0 },
-				scrub => { w => 30, c => 60 },
+				scrub => { w => 35, c => 70 },
 				cksum_err => { w => 0, c => 10 },
 				read_err => { w => 0, c => 10 },
 				write_err => { w => 0, c => 10 },
