@@ -1,21 +1,24 @@
 #!/usr/bin/perl
 
-# Copyright (c) 2024, Paul B. Henson <henson@acm.org>
+# Copyright (c) 2024-2025 Paul B. Henson <henson@acm.org>
 
 use strict;
 use warnings;
 
+use IO::Socket::SSL ();
 use Monitoring::Plugin ();
 use Net::SIP::Simple ();
 use POSIX ();
 use Time::HiRes ();
 
-my $VERSION = '0.5';
+my $VERSION = '0.6';
 
 my $plugin = Monitoring::Plugin->new(
 	usage => "Usage: %s [-v|--verbose] --host <host> [--port <port>] " .
-				"--user <user> --domain <domain> [--password <password> | --pwfile <file>]" .
-				"[--timeout <timeout>] [--warning <seconds>] [--critical <seconds>]",
+				"--user <user> --domain <domain> [--password <password> | --pwfile <file>] " .
+				"[--timeout <timeout>] [--warning <seconds>] [--critical <seconds>] " .
+				"[--tls] [--tls_noverify] [--tls_cn <name>] [--tls_ca_path <path>] " .
+				"[--tls_ca_file <path>] [--tls_sni <name>]",
 	version => $VERSION,
 	url => "https://github.com/pbhenson/icinga-plugins",
 	blurb => "check sip server registration operation",
@@ -67,6 +70,36 @@ $plugin->add_arg(
 	default => 10,
 );
 
+$plugin->add_arg(
+	spec => "tls",
+	help => "enable TLS on connection",
+);
+
+$plugin->add_arg(
+	spec => "tls_noverify",
+	help => "do not verify peer certificate",
+);
+
+$plugin->add_arg(
+	spec => "tls_cn=s",
+	help => "specific CN value to verify on peer certificate",
+);
+
+$plugin->add_arg(
+	spec => "tls_ca_path=s",
+	help => "path to CA directory",
+);
+
+$plugin->add_arg(
+	spec => "tls_ca_file=s",
+	help => "path to CA file",
+);
+
+$plugin->add_arg(
+	spec => "tls_sni=s",
+	help => "hostname to specify to peer via SNI",
+);
+
 $plugin->getopts();
 my $opts = $plugin->opts();
 
@@ -87,11 +120,37 @@ else {
 	$plugin->plugin_die("password or pwfile required");
 }
 
+my $registrar = $opts->host() . ":" . $opts->port();
+
+my $tls;
+if (defined($opts->tls())) {
+	$registrar .= ';transport=tls';
+
+	$tls = {};
+	if (defined($opts->tls_noverify())) {
+		$tls->{SSL_verify_mode} = IO::Socket::SSL::SSL_VERIFY_NONE;
+	}
+	if (defined($opts->tls_cn())) {
+		$tls->{SSL_verifycn_name} = $opts->tls_cn();
+	}
+	if (defined($opts->tls_ca_path())) {
+		$tls->{SSL_ca_path} = $opts->tls_ca_path();
+	}
+	if (defined($opts->tls_ca_file())) {
+		$tls->{SSL_ca_file} = $opts->tls_ca_file();
+	}
+	if (defined($opts->tls_sni())) {
+		$tls->{SSL_hostname} = $opts->tls_sni();
+	}
+}
+
 my $sip_ua = Net::SIP::Simple->new(
-				registrar => $opts->host() . ":" . $opts->port(),
+				registrar => $registrar,
 				domain => $opts->domain(),
-				from => $opts->user(),
+				from => from => 'sip:' . $opts->user() . '@' . $opts->domain(),
+				contact => 'sip:' . $opts->user() . '@' . $opts->domain(),
 				auth => [ $opts->user(), $password ],
+				tls => $tls,
 );
 
 my ($start, $end, $result);
