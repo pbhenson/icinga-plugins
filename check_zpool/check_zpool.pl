@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Copyright (c) 2024, Paul B. Henson <henson@acm.org>
+# Copyright (c) 2024-2026 Paul B. Henson <henson@acm.org>
 
 use strict;
 use warnings;
@@ -262,8 +262,10 @@ foreach my $line (@{$output}) {
 
 			}
 			else {
-				foreach (qw(cksum_err read_err write_err)) {
-					$vdev_errs->{$_} += $zp_status->{vdevs}{$vdev}{$_};
+				if ($vdev ne 'logs') {
+					foreach (qw(cksum_err read_err write_err)) {
+						$vdev_errs->{$_} += $zp_status->{vdevs}{$vdev}{$_};
+					}
 				}
 
 				if (exists($zp_status->{vdevs}{$vdev}{vdevs})) {
@@ -353,7 +355,7 @@ sub parse_zp_status {
 				if ($line =~ /^([a-zA-z0-9_:.-]+)\s*(.*)/) {
 					($tlv, my $stats) = ($1, $2);
 
-					next if $tlv eq 'spares';
+					next if $tlv =~ /^(logs|spares)$/;
 
 					($zp_status->{vdevs}{$tlv}{state}, $zp_status->{vdevs}{$tlv}{read_err},
 					 $zp_status->{vdevs}{$tlv}{write_err}, $zp_status->{vdevs}{$tlv}{cksum_err}) =
