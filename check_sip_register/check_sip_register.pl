@@ -147,7 +147,7 @@ if (defined($opts->tls())) {
 my $sip_ua = Net::SIP::Simple->new(
 				registrar => $registrar,
 				domain => $opts->domain(),
-				from => from => 'sip:' . $opts->user() . '@' . $opts->domain(),
+				from => 'sip:' . $opts->user() . '@' . $opts->domain(),
 				contact => 'sip:' . $opts->user() . '@' . $opts->domain(),
 				auth => [ $opts->user(), $password ],
 				tls => $tls,
